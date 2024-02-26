@@ -8,10 +8,7 @@
 #define DEBUG_FMT(FMT) FMT
 #endif
 
-size_t serialWriteWrapper(uint8_t c) {
-    // Serial.write returns the number of bytes written, which is typically 1 for successful writing of a single byte.
-    return Serial.write(c); 
-}
+size_t serialWriteWrapper(uint8_t c);
 
 #ifdef DEBUG
 #define DEBUG_PRINT(FMT, ...) eprintf(serialWriteWrapper, FMT, ## __VA_ARGS__)

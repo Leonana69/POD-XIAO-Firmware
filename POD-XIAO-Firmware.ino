@@ -1,19 +1,23 @@
+#include <WiFi.h>
+#include "main.h"
 #include "config.h"
 #include "stm_serial.h"
-#include "main.h"
-#include <WiFi.h>
+#include "podtp.h"
+#include "link.h"
 
 #define DEBUG
 #include "debug.h"
 
-#define WIFI_
+#define WIFI
+
+WiFiServer server(80);
+WiFiClient client;
 
 void setup() {
 #ifdef DEBUG
   // for print debug message to USB serial
   Serial.begin(115200);
 #endif
-  // put your setup code here, to run once:
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(ESP_LED, OUTPUT);
 
@@ -23,10 +27,6 @@ void setup() {
   pinMode(BUTTON, INPUT_PULLUP);
 
   stmSerialInit();
-
-  digitalWrite(STM_ENABLE, LOW);
-  digitalWrite(STM_FLOW_CTRL, LOW);
-  digitalWrite(STM_ENABLE, HIGH);
 
   DEBUG_PRINT("Hello, world!\n");
 #ifdef WIFI
@@ -41,10 +41,54 @@ void setup() {
     DEBUG_PRINT(".");
   }
   DEBUG_PRINT("\nWiFi connected with IP: %s\n", WiFi.localIP().toString().c_str());
+  server.begin();
 #endif
+
+  // start bootloader for test
+  digitalWrite(STM_ENABLE, LOW);
+  digitalWrite(STM_FLOW_CTRL, HIGH);
+  digitalWrite(STM_ENABLE, HIGH);
 }
 
+bool buttonState = false;
+PodtpPacket packet;
 void loop() {
-  // put your main code here, to run repeatedly:
+  if (!client || !client.connected()) {
+    client = server.available();
+  }
 
+  if (client && client.connected() && client.available()) {
+    while (client.available()) {
+      if (linkGetPacket(&packet, (uint8_t) client.read()))
+        DEBUG_PRINT("Received packet: type=%d, port=%d, length=%d\n", packet.type, packet.port, packet.length);
+    }
+  }
+
+
+  if (digitalRead(BUTTON) == LOW) {
+    if (!buttonState) {
+      buttonState = true;
+      digitalWrite(LED_BUILTIN, HIGH);
+      DEBUG_PRINT("Button pressed\n");
+
+      packet.type = PODTP_TYPE_BOOT_LOADER;
+      packet.port = PORT_LOAD_BUFFER;
+      LoadBuffer *lb = (LoadBuffer *)packet.data;
+      lb->bufferPage = 2;
+      lb->offset = 645;
+      packet.length = 1 + sizeof(LoadBuffer) + 5;
+      packet.data[sizeof(LoadBuffer)] = 0x01;
+      packet.data[sizeof(LoadBuffer) + 1] = 0x02;
+      packet.data[sizeof(LoadBuffer) + 2] = 0x03;
+      packet.data[sizeof(LoadBuffer) + 3] = 0x04;
+      packet.data[sizeof(LoadBuffer) + 4] = 0x05;
+      linkSendPacket(&packet);
+    }
+  } else {
+    if (buttonState) {
+      buttonState = false;
+      digitalWrite(LED_BUILTIN, LOW);
+      DEBUG_PRINT("Button released\n");
+    }
+  }
 }

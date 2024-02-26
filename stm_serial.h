@@ -3,6 +3,8 @@
 
 #include "main.h"
 
+extern HardwareSerial stmSerial;
+
 void stmSerialInit();
 void stmSerialSend(uint8_t* data, size_t len);
 
