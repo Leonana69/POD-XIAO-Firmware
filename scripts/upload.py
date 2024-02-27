@@ -1,4 +1,4 @@
-import math
+import math, time
 import struct
 import argparse
 from tqdm import tqdm
@@ -14,6 +14,10 @@ DEFAULT_SERVER_PORT = 80  # Replace with your ESP32's port number
 
 PORT_LOAD_BUFFER = 1
 PORT_WRITE_FLASH = 2
+
+PORT_START_STM32_BOOTLOADER = 1
+PORT_START_STM32_FIRMWARE = 2
+
 FIRMWARE_START_PAGE = 16
 PAGE_SIZE = 1024
 
@@ -102,6 +106,20 @@ def send_load_buffer(podtp, file_path) -> bool:
         return False
     return True
 
+def send_start_stm32_bootloader(podtp):
+    packet = PodtpPacket()
+    packet.content.packet.header.type = PodtpType.PODTP_TYPE_ESP32.value  # Set type (4 bits)
+    packet.content.packet.header.port = PORT_START_STM32_BOOTLOADER  # Set port (4 bits)
+    packet.length = 1
+    podtp.send(packet)
+
+def send_start_stm32_firmware(podtp):
+    packet = PodtpPacket()
+    packet.content.packet.header.type = PodtpType.PODTP_TYPE_ESP32.value  # Set type (4 bits)
+    packet.content.packet.header.port = PORT_START_STM32_FIRMWARE  # Set port (4 bits)
+    packet.length = 1
+    podtp.send(packet)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Upload firmware to STM32 via ESP32 over WiFi')
     parser.add_argument('file', help='Binary file to upload', type=str)
@@ -113,8 +131,11 @@ if __name__ == '__main__':
 
     podtp = Podtp(args.ip, args.port)
     podtp.connect()
+    send_start_stm32_bootloader(podtp)
+    time.sleep(1)
     if send_load_buffer(podtp, args.file):
         print_t('Upload successful')
     else:
         print_t('Upload failed')
+    send_start_stm32_firmware(podtp)
     podtp.disconnect()
