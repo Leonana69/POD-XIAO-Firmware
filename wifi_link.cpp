@@ -100,6 +100,4 @@ void wifiSendPacket(PodtpPacket *packet) {
     prefix[2] = packet->length;
     client.write(prefix, 3);
     client.write(packet->raw, packet->length);
-    DEBUG_PRINT("RAW: %d\n", packet->raw[0]);
-    DEBUG_PRINT("Sent packet: type=%d, port=%d, length=%d\n", packet->type, packet->port, packet->length);
 }

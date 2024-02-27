@@ -54,8 +54,10 @@ void stmLinkSendPacket(PodtpPacket *packet) {
 PodtpPacket* stmLinkSendReliablePacket(PodtpPacket *packet, int retry) {
     static PodtpPacket ack_packet;
     for (int i = 0; i < retry; i++) {
+        // set packet type to error by default
+        ack_packet.type = PODTP_TYPE_ERROR;
         stmLinkSendPacket(packet);
-        xQueueReceive(stmLinkAckQueue, &ack_packet, 100);
+        xQueueReceive(stmLinkAckQueue, &ack_packet, 300);
         if (ack_packet.type == PODTP_TYPE_ACK) {
             break;
         }

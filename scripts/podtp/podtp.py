@@ -15,12 +15,10 @@ class Podtp:
     def send(self, packet: PodtpPacket):
         self.link.send(packet)
     
-    def send_reliable(self, packet: PodtpPacket, timeout = 1000) -> bool:
-        for _ in range(timeout // LINK_MAX_WAIT_TIME):
-            self.link.send(packet)
-            ack = self.link.receive()
-            if ack is None:
-                continue
-            elif ack.content.packet.header.type == PodtpType.PODTP_TYPE_ACK.value:
-                return True
-        return False
+    def send_reliable(self, packet: PodtpPacket) -> bool:
+        self.link.send(packet)
+        ack = self.link.receive()
+        if ack and ack.content.packet.header.type == PodtpType.PODTP_TYPE_ACK.value:
+            return True
+        else:
+            return False

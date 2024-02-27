@@ -11,6 +11,7 @@
 enum {
     PODTP_TYPE_ERROR = 0x0,
     PODTP_TYPE_ACK = 0x1,
+    PODTP_TYPE_ESP32 = 0xE,
     PODTP_TYPE_BOOT_LOADER = 0xF,
 };
 

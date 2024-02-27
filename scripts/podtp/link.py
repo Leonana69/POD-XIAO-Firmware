@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Optional
 
 from .podtp_packet import *
+from .utils import print_t
 
 LINK_MAX_WAIT_TIME = 200
 
@@ -26,13 +27,13 @@ class WifiLink:
     def connect(self):
         try:
             self.client_socket.connect((self.server_ip, self.server_port))
-            print(f'Connected to {self.server_ip}:{self.server_port}')
+            print_t(f'Connected to {self.server_ip}:{self.server_port}')
         except:
-            print(f'Failed to connect to {self.server_ip}:{self.server_port}')
+            print_t(f'Failed to connect to {self.server_ip}:{self.server_port}')
 
     def disconnect(self):
         self.client_socket.close()
-        print(f'Disconnected from {self.server_ip}:{self.server_port}')
+        print_t(f'Disconnected from {self.server_ip}:{self.server_port}')
 
     def send(self, packet: PodtpPacket):
         self.client_socket.send(packet.pack())
@@ -43,25 +44,20 @@ class WifiLink:
         :param timeout: The number of seconds to wait for a complete packet.
         :return: A PodtpPacket if one is successfully received, None otherwise.
         """
-        start = time.time()
         while True:
-            readable, _, _ = select.select([self.client_socket], [], [], 1)
+            readable, _, _ = select.select([self.client_socket], [], [], 5)
             if not readable:
-                print("Timeout: No data received.")
+                print_t("Timeout: No data received.")
                 return None
 
             data = self.client_socket.recv(PODTP_MAX_DATA_LEN + 1)
             if not data:
-                print("Connection closed by the server.")
+                print_t("Connection closed by the server.")
                 return None
             
             packet = self.process(data)
             if packet:
                 return packet
-            
-            if time.time() - start > LINK_MAX_WAIT_TIME / 1000:
-                print("Timeout: Incomplete packet received.")
-                return None
 
     def process(self, data: bytes) -> Optional[PodtpPacket]:
         for byte in data:
@@ -77,6 +73,7 @@ class WifiLink:
 
                 case WifiLinkState.PODTP_STATE_LENGTH:
                     self.length = byte
+                    self.packet.length = 0
                     if self.length > PODTP_MAX_DATA_LEN or self.length == 0:
                         self.link_state = WifiLinkState.PODTP_STATE_START_1
                     else:
