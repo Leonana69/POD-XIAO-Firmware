@@ -21,8 +21,8 @@ typedef struct {
             union {
                 uint8_t header;
                 struct {
-                    uint8_t type:4;
                     uint8_t port:4;
+                    uint8_t type:4;
                 };
             };
             uint8_t data[PODTP_MAX_DATA_LEN];

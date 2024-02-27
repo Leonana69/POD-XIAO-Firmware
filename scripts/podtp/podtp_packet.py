@@ -45,30 +45,18 @@ class PodtpPacket(Structure):
                 ("content", ContentPacket)]
     
     def pack(self):
-        buffer = bytearray(1 + 2 + self.length + 2)
+        buffer = bytearray(2 + 1 + self.length)
         buffer[0] = PODTP_START_BYTE_1
         buffer[1] = PODTP_START_BYTE_2
         buffer[2] = self.length
-        checksum = [self.length, self.length]
-        for i in range(self.length):
-            checksum[0] = (checksum[0] + self.content.raw[i]) & 0xFF
-            checksum[1] = (checksum[1] + checksum[0]) & 0xFF
-            buffer[3 + i] = self.content.raw[i]
-        buffer[3 + self.length] = checksum[0]
-        buffer[4 + self.length] = checksum[1]
+        buffer[3:3 + self.length] = self.content.raw[:self.length]
         return buffer
     
     def unpack(self, buffer):
         if buffer[0] != PODTP_START_BYTE_1 or buffer[1] != PODTP_START_BYTE_2:
             return False
         self.length = buffer[2]
-        checksum = [self.length, self.length]
-        for i in range(self.length):
-            checksum[0] = (checksum[0] + buffer[3 + i]) & 0xFF
-            checksum[1] = (checksum[1] + checksum[0]) & 0xFF
-            self.content.raw[i] = buffer[3 + i]
-        if buffer[3 + self.length] != checksum[0] or buffer[4 + self.length] != checksum[1]:
-            return False
+        self.content.raw[:self.length] = buffer[3:3 + self.length]
         return True
     
     def GET_EMPTY_PACKET():
