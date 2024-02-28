@@ -31,6 +31,4 @@
 *.out
 *.app
 
-.vscode/
-
 __pycache__/

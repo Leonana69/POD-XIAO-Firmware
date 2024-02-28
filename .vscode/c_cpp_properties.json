@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/Users/guojun/Library/Arduino15/packages/esp32/hardware/esp32/2.0.14/cores/**",
+                "/Users/guojun/Library/Arduino15/packages/esp32/hardware/esp32/2.0.14/libraries/**",
+                "/Users/guojun/Library/Arduino15/packages/esp32/hardware/esp32/2.0.14/tools/sdk/esp32s3/**",
+                "/Users/guojun/Library/Arduino15/packages/esp32/hardware/esp32/2.0.14/variants/XIAO_ESP32S3/**"
+            ],
+            "defines": ["portENTER_CRITICAL"],
+            "macFrameworkPath": [
+                "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "compilerPath": "/Users/guojun/Library/Arduino15/packages/esp32/tools/xtensa-esp32s3-elf-gcc/esp-2021r2-patch5-8.4.0/bin/xtensa-esp32s3-elf-g++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "macos-clang-arm64"
+        }
+    ],
+    "version": 4
+}
