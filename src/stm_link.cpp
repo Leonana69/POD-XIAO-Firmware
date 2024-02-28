@@ -9,7 +9,7 @@
 StmLink *stmLink;
 
 StmLink::StmLink(): uartSerial(0) {
-    uartSerial.begin(1000000, SERIAL_8N1, STM_RX, STM_TX);
+    uartSerial.begin(1000000, SERIAL_8N1, STM_RX_PIN, STM_TX_PIN);
     ackQueue = xQueueCreate(3, sizeof(PodtpPacket));
 }
 
