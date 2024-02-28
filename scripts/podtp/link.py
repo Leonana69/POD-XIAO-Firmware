@@ -7,7 +7,7 @@ from typing import Optional
 from .podtp_packet import *
 from .utils import print_t
 
-LINK_MAX_WAIT_TIME = 200
+LINK_MAX_WAIT_TIME = 500
 
 class WifiLinkState(Enum):
     PODTP_STATE_START_1 = 0
@@ -23,19 +23,28 @@ class WifiLink:
         self.server_ip = server_ip
         self.server_port = server_port
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.settimeout(LINK_MAX_WAIT_TIME / 1000)
+        self.client_connected = False
 
-    def connect(self):
+    def connect(self) -> bool:
         try:
             self.client_socket.connect((self.server_ip, self.server_port))
+            self.client_connected = True
             print_t(f'Connected to {self.server_ip}:{self.server_port}')
+            return True
         except:
             print_t(f'Failed to connect to {self.server_ip}:{self.server_port}')
+            return False
 
     def disconnect(self):
         self.client_socket.close()
+        self.client_connected = False
         print_t(f'Disconnected from {self.server_ip}:{self.server_port}')
 
     def send(self, packet: PodtpPacket):
+        if not self.client_connected:
+            print_t(f'Failed to send packet: Not connected to {self.server_ip}:{self.server_port}')
+            return
         self.client_socket.send(packet.pack())
 
     def receive(self) -> Optional[PodtpPacket]:
@@ -44,6 +53,9 @@ class WifiLink:
         :param timeout: The number of seconds to wait for a complete packet.
         :return: A PodtpPacket if one is successfully received, None otherwise.
         """
+        if not self.client_connected:
+            print_t(f'Failed to receive packet: Not connected to {self.server_ip}:{self.server_port}')
+            return None
         while True:
             readable, _, _ = select.select([self.client_socket], [], [], 5)
             if not readable:

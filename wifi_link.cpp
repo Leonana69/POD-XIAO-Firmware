@@ -1,23 +1,18 @@
 #include "wifi_link.h"
 #include "link.h"
-#include <WiFi.h>
 
 #define DEBUG
 #include "debug.h"
 
-WiFiServer server(80);
-WiFiClient client;
+WifiLink *wifiLink;
 
-bool wifiGetPacket(PodtpPacket *packet, uint8_t c);
+const char* WIFI_SSID = "YECL-tplink";
+const char* WIFI_PASSWORD = "08781550";
 
-void wifiLinkInit() {
-    // const char* WIFI_SSID = "LEONA";
-	// const char* WIFI_PASSWORD = "64221771";
-	const char* WIFI_SSID = "YECL-tplink";
-	const char* WIFI_PASSWORD = "08781550";
+WifiLink::WifiLink(): server(80), client() {
 	WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-	DEBUG_PRINT("Connecting to WiFi");
-	while (WiFi.status() != WL_CONNECTED) {
+    DEBUG_PRINT("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED) {
 		delay(500);
 		DEBUG_PRINT(".");
 	}
@@ -25,22 +20,27 @@ void wifiLinkInit() {
 	server.begin();
 }
 
-void wifiServerTask(void *pvParameters) {
-	PodtpPacket packet;
-	int packetCount = 0;
+void WifiLink::sendPacket(PodtpPacket *packet) {
+    if (!client || !client.connected()) {
+        return;
+    }
+    static uint8_t prefix[3] = {PODTP_START_BYTE_1, PODTP_START_BYTE_2, 0};
+    prefix[2] = packet->length;
+    client.write(prefix, 3);
+    client.write(packet->raw, packet->length);
+}
+
+void WifiLink::rxTask(void *pvParameters) {
 	while (true) {
 		if (!client || !client.connected()) {
 			client = server.available();
-			packetCount = 0;
 		}
-
    		// check for new packet
 		if (client && client.connected() && client.available()) {
 			while (client.available()) {
-				if (wifiGetPacket(&packet, (uint8_t) client.read())) {
-					DEBUG_PRINT("Received [%d] packet: type=%d, port=%d, length=%d\n", packetCount, packet.type, packet.port, packet.length);
-					linkProcessPacket(&packet);
-					packetCount++;
+				if (wifiParsePacket((uint8_t) client.read())) {
+					DEBUG_PRINT("RP: t=%d, p=%d, l=%d\n", packetBufferRx.type, packetBufferRx.port, packetBufferRx.length);
+					linkProcessPacket(&packetBufferRx);
 				}
 			}
 		}
@@ -55,31 +55,31 @@ typedef enum {
     PODTP_STATE_RAW_DATA
 } WifiLinkState;
 
-bool wifiGetPacket(PodtpPacket *packet, uint8_t c) {
+bool WifiLink::wifiParsePacket(uint8_t byte) {
     static WifiLinkState state = PODTP_STATE_START_1;
     static uint8_t length = 0;
 
     switch (state) {
         case PODTP_STATE_START_1:
-            if (c == PODTP_START_BYTE_1) {
+            if (byte == PODTP_START_BYTE_1) {
                 state = PODTP_STATE_START_2;
             }
             break;
         case PODTP_STATE_START_2:
-            state = (c == PODTP_START_BYTE_2) ? PODTP_STATE_LENGTH : PODTP_STATE_START_1;
+            state = (byte == PODTP_START_BYTE_2) ? PODTP_STATE_LENGTH : PODTP_STATE_START_1;
             break;
         case PODTP_STATE_LENGTH:
-            length = c;
+            length = byte;
             if (length > PODTP_MAX_DATA_LEN || length == 0) {
                 state = PODTP_STATE_START_1;
             } else {
-                packet->length = 0;
+                packetBufferRx.length = 0;
                 state = PODTP_STATE_RAW_DATA;
             }
             break;
         case PODTP_STATE_RAW_DATA:
-            packet->raw[packet->length++] = c;
-            if (packet->length >= length) {
+            packetBufferRx.raw[packetBufferRx.length++] = byte;
+            if (packetBufferRx.length >= length) {
                 state = PODTP_STATE_START_1;
                 return true;
             }
@@ -92,12 +92,6 @@ bool wifiGetPacket(PodtpPacket *packet, uint8_t c) {
     return false;
 }
 
-void wifiSendPacket(PodtpPacket *packet) {
-    if (!client || !client.connected()) {
-        return;
-    }
-    static uint8_t prefix[3] = {PODTP_START_BYTE_1, PODTP_START_BYTE_2, 0};
-    prefix[2] = packet->length;
-    client.write(prefix, 3);
-    client.write(packet->raw, packet->length);
+void wifiLinkRxTask(void *pvParameters) {
+    wifiLink->rxTask(pvParameters);
 }

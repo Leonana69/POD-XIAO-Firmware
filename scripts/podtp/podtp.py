@@ -1,4 +1,3 @@
-import socket
 from .podtp_packet import PodtpPacket, PodtpType
 from .link import WifiLink, LINK_MAX_WAIT_TIME
 
@@ -6,8 +5,8 @@ class Podtp:
     def __init__(self, server_ip, server_port):
         self.link = WifiLink(server_ip, server_port)
 
-    def connect(self):
-        self.link.connect()
+    def connect(self) -> bool:
+        return self.link.connect()
 
     def disconnect(self):
         self.link.disconnect()

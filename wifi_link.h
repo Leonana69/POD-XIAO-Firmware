@@ -4,8 +4,20 @@
 #include "main.h"
 #include "podtp.h"
 
-void wifiLinkInit();
-void wifiServerTask(void *pvParameters);
-void wifiSendPacket(PodtpPacket *packet);
+class WifiLink {
+private:
+    WiFiServer server;
+    WiFiClient client;
+    PodtpPacket packetBufferRx;
+    bool wifiParsePacket(uint8_t c);
+public:
+    WifiLink();
+    void sendPacket(PodtpPacket *packet);
+    void rxTask(void *pvParameters);
+};
+
+void wifiLinkRxTask(void *pvParameters);
+
+extern WifiLink *wifiLink;
 
 #endif // __WIFI_LINK_H__

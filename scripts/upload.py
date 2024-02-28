@@ -3,9 +3,10 @@ import struct
 import argparse
 from tqdm import tqdm
 
-from podtp.podtp import Podtp
-from podtp.podtp_packet import PODTP_MAX_DATA_LEN, PodtpPacket, PodtpType
-from podtp.utils import print_t
+from podtp import Podtp
+from podtp import PodtpPacket, PodtpType
+from podtp import print_t
+from podtp.podtp_packet import PODTP_MAX_DATA_LEN
 
 # Set the server's IP address and port
 # SERVER_IP = '10.0.0.131'  # Replace with your ESP32's IP address
@@ -130,12 +131,13 @@ if __name__ == '__main__':
     print_t(f'Uploading {args.file} to {args.ip}:{args.port}')
 
     podtp = Podtp(args.ip, args.port)
-    podtp.connect()
+    if not podtp.connect():
+        exit(1)
     send_start_stm32_bootloader(podtp)
     time.sleep(1)
     if send_load_buffer(podtp, args.file):
-        print_t('Upload successful')
+        print_t('Upload [OK]')
     else:
-        print_t('Upload failed')
+        print_t('Upload [FAILED]')
     send_start_stm32_firmware(podtp)
     podtp.disconnect()

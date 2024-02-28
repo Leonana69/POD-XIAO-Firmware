@@ -7,36 +7,35 @@
 #include "debug.h"
 
 void linkProcessPacket(PodtpPacket *packet) {
-    PodtpPacket *rslt;
     switch (packet->type) {
         case PODTP_TYPE_ACK:
-            stmLinkAckQueuePut(packet);
-            DEBUG_PRINT("ACK packet: port=%d, length=%d\n", packet->port, packet->length);
+            stmLink->ackQueuePut(packet);
+            DEBUG_PRINT("ACK: p=%d, l=%d\n", packet->port, packet->length);
             break;
         case PODTP_TYPE_ERROR:
-            DEBUG_PRINT("Error packet: port=%d, length=%d\n", packet->port, packet->length);
-            stmLinkAckQueuePut(packet);
+            DEBUG_PRINT("ERR: p=%d, l=%d\n", packet->port, packet->length);
+            stmLink->ackQueuePut(packet);
             break;
 
         case PODTP_TYPE_ESP32:
             // packets for ESP32 are not sent to STM32
             if (packet->port == PORT_START_STM32_BOOTLOADER) {
-                DEBUG_PRINT("Start STM32 bootloader packet: port=%d, length=%d\n", packet->port, packet->length);
+                DEBUG_PRINT("Start STM32 Bootloader");
                 bootSTM32Bootloader();
             } else if (packet->port == PORT_START_STM32_FIRMWARE) {
-                DEBUG_PRINT("Start STM32 firmware packet: port=%d, length=%d\n", packet->port, packet->length);
+                DEBUG_PRINT("Start STM32 Firmware");
                 bootSTM32Firmware();
             } else {
-                DEBUG_PRINT("Unknown ESP32 packet: port=%d, length=%d\n", packet->port, packet->length);
+                DEBUG_PRINT("Unknown ESP32 packet: p=%d, l=%d\n", packet->port, packet->length);
             }
             break;
         case PODTP_TYPE_BOOT_LOADER:
-            DEBUG_PRINT("Bootloader packet: port=%d, length=%d\n", packet->port, packet->length);
-            rslt = stmLinkSendReliablePacket(packet);
-            wifiSendPacket(rslt);
+            DEBUG_PRINT("Bootloader packet: p=%d, l=%d\n", packet->port, packet->length);
+            stmLink->sendReliablePacket(packet);
+            wifiLink->sendPacket(packet);
             break;
         default:
-            DEBUG_PRINT("Unknown packet: type=%d, port=%d, length=%d\n", packet->type, packet->port, packet->length);
+            DEBUG_PRINT("Unknown packet: t=%d, p=%d, l=%d\n", packet->type, packet->port, packet->length);
             break;
     }
     return;

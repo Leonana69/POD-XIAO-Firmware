@@ -1,4 +1,4 @@
-from ctypes import *
+from ctypes import Structure, Union, c_uint8
 from enum import Enum
 
 PODTP_MAX_DATA_LEN = 127
