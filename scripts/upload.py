@@ -19,7 +19,8 @@ PORT_WRITE_FLASH = 2
 PORT_START_STM32_BOOTLOADER = 1
 PORT_START_STM32_FIRMWARE = 2
 
-FIRMWARE_START_PAGE = 16
+FIRMWARE_START_PAGE = 128
+BUFFER_PAGE_COUNT = 10
 PAGE_SIZE = 1024
 
 class LoadBuffer:
@@ -61,7 +62,7 @@ def send_write_flash(podtp, flash_page, num_pages) -> bool:
 
     packet.content.packet.data[:write_flash.size()] = write_flash.pack()
     packet.length = 1 + write_flash.size()
-    if not podtp.send_reliable(packet):
+    if not podtp.send(packet):
         print_t(f'Failed to write flash page {flash_page}')
         return False
     return True
@@ -78,15 +79,19 @@ def send_load_buffer(podtp, file_path) -> bool:
 
     total_size = len(binary)
     page_count = math.ceil(total_size / PAGE_SIZE)
+    buffer_free_size = BUFFER_PAGE_COUNT * PAGE_SIZE
 
     print_t(f'Uploading {page_count} pages with {math.ceil(total_size / max_packet_load)} packets...')
-    for index in tqdm(range(0, total_size, max_packet_load)):
+    index = 0
+    pbar = tqdm(total=total_size, unit='B', unit_scale=True, desc='Uploading')
+    while index < total_size:
         page = index // PAGE_SIZE
         offset = index % PAGE_SIZE
 
-        if page % 10 == 0 and page > 0:
+        if buffer_free_size == 0:
             if not send_write_flash(podtp, page - 10, 10):
                 return False
+            buffer_free_size = BUFFER_PAGE_COUNT * PAGE_SIZE
 
         load_buffer.bufferPage = page % 10
         load_buffer.offset = offset
@@ -96,12 +101,20 @@ def send_load_buffer(podtp, file_path) -> bool:
             packet_load = total_size - index
         else:
             packet_load = max_packet_load
+
+        if packet_load > buffer_free_size:
+            packet_load = buffer_free_size
+
+        buffer_free_size -= packet_load
+        pbar.update(packet_load)
+
         # print_t(f'Sent page {page} offset {offset} packet_length {packet.length} packet_load {packet_load}')
         packet.content.packet.data[load_buffer.size():load_buffer.size() + packet_load] = binary[index:index + packet_load]
         packet.length = 1 + load_buffer.size() + packet_load
-        if not podtp.send_reliable(packet):
+        if not podtp.send(packet):
             print_t(f'Upload failed at page {page} offset {offset}')
             return False
+        index += packet_load
 
     if not send_write_flash(podtp, page // 10 * 10, page_count % 10):
         return False
@@ -133,11 +146,12 @@ if __name__ == '__main__':
     podtp = Podtp(args.ip, args.port)
     if not podtp.connect():
         exit(1)
+
     send_start_stm32_bootloader(podtp)
     time.sleep(1)
     if send_load_buffer(podtp, args.file):
         print_t('Upload [OK]')
+        send_start_stm32_firmware(podtp)
     else:
         print_t('Upload [FAILED]')
-    send_start_stm32_firmware(podtp)
     podtp.disconnect()

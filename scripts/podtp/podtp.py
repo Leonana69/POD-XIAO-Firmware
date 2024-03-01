@@ -11,8 +11,15 @@ class Podtp:
     def disconnect(self):
         self.link.disconnect()
 
-    def send(self, packet: PodtpPacket):
+    def send(self, packet: PodtpPacket) -> bool:
+        if packet.content.packet.header.type == PodtpType.PODTP_TYPE_BOOT_LOADER.value:
+            return self.send_reliable(packet)
+        else:
+            return self.link.send(packet)
+
+    def send_once(self, packet: PodtpPacket) -> bool:
         self.link.send(packet)
+        return True
     
     def send_reliable(self, packet: PodtpPacket) -> bool:
         self.link.send(packet)

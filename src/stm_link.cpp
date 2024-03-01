@@ -29,15 +29,22 @@ void StmLink::sendPacket(PodtpPacket *packet) {
     uartSerial.write(tail, 2);
 }
 
+void StmLink::write(uint8_t *data, uint8_t length) {
+    uartSerial.write(data, length);
+}
+
 void StmLink::ackQueuePut(PodtpPacket *packet) {
     xQueueSend(ackQueue, packet, 0);
 }
 
 bool StmLink::sendReliablePacket(PodtpPacket *packet, int retry) {
     packetBufferTx = *packet;
+    packet->type = PODTP_TYPE_ERROR;
+    packet->length = 1;
     for (int i = 0; i < retry; i++) {
+        DEBUG_PRINT("SR [%d]: p=%d, l=%d\n", i, packet->port, packet->length);
         sendPacket(&packetBufferTx);
-        xQueueReceive(ackQueue, packet, 300);
+        xQueueReceive(ackQueue, packet, 1000);
         if (packet->type == PODTP_TYPE_ACK) {
             return true;
         }
