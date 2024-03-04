@@ -12,13 +12,12 @@ This project is developed with Arduino IDE and v2.0.14 ESP32 Arduino package. Mo
 
 ## About
 ### Remote STM32 Firmware Upload
-The STM32 has a custom bootloader flashed at `0x8000000`, it will communicate with the ESP32 through UART. The drone controller firmware is located at `0x8004000` and the bootloader can update this region. Make sure the real firmware is compiled with the following link config with `FLASH (rx)` starting at `0x8004000`:
+The STM32 has a [custom bootloader](https://github.com/Leonana69/POD-Bootloader-H7) flashed at `0x8000000`, it will communicate with the ESP32 through UART. The drone controller firmware is located at `0x8020000` (this number may vary according to `FIRMWARE_START_PAGE` in the bootloader) and the bootloader can update this region. Make sure the real firmware is compiled with the following link config with `FLASH (rx)` starting at `0x8020000`:
 ```
 /* in STM32*_FLASH.ld */
 MEMORY
 {
-RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
-CCMRAM (xrw)      : ORIGIN = 0x10000000, LENGTH = 64K
-FLASH (rx)      : ORIGIN = 0x8004000, LENGTH = 1024K
+... /* other memory regions */
+FLASH (rx)      : ORIGIN = 0x8020000, LENGTH = 896K
 }
 ```
