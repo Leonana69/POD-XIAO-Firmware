@@ -9,11 +9,7 @@
 void linkProcessPacket(PodtpPacket *packet) {
     switch (packet->type) {
         case PODTP_TYPE_ACK:
-            stmLink->ackQueuePut(packet);
-            DEBUG_PRINT("ACK: p=%d, l=%d\n", packet->port, packet->length);
-            break;
-        case PODTP_TYPE_ERROR:
-            DEBUG_PRINT("ERR: p=%d, l=%d\n", packet->port, packet->length);
+            DEBUG_PRINT("ACK: %s, l=%d\n", packet->port == PODTP_PORT_OK ? "OK" : "ERROR", packet->length);
             stmLink->ackQueuePut(packet);
             break;
 

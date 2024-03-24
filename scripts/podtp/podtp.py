@@ -4,8 +4,8 @@ from .link import WifiLink
 from .utils import print_t
 
 class Podtp:
-    def __init__(self, server_ip, server_port):
-        self.link = WifiLink(server_ip, server_port)
+    def __init__(self, config: dict):
+        self.link = WifiLink(config["ip"], config["port"])
 
     def connect(self) -> bool:
         return self.link.connect()
@@ -28,7 +28,8 @@ class Podtp:
     def send_reliable(self, packet: PodtpPacket) -> bool:
         self.link.send(packet)
         ack = self.link.receive()
-        if ack and ack.header.type == PodtpType.PODTP_TYPE_ACK:
+        if ack and ack.header.type == PodtpType.PODTP_TYPE_ACK \
+               and ack.header.port == PodtpPort.PORT_OK:
             return True
         else:
             return False

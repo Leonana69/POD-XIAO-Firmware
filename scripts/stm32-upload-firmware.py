@@ -1,4 +1,4 @@
-import math, time
+import math, time, json
 import struct
 import argparse
 from tqdm import tqdm
@@ -7,11 +7,6 @@ from podtp import Podtp
 from podtp import PodtpPacket, PodtpType, PodtpPort
 from podtp import print_t
 from podtp.podtp_packet import PODTP_MAX_DATA_LEN
-
-# Set the server's IP address and port
-DEFAULT_SERVER_IP = '10.0.0.115'  # Replace with your ESP32's IP address
-# DEFAULT_SERVER_IP = '192.168.0.116'  # Replace with your ESP32's IP address
-DEFAULT_SERVER_PORT = 80  # Replace with your ESP32's port number
 
 FIRMWARE_START_PAGE = 128
 BUFFER_PAGE_COUNT = 10
@@ -122,15 +117,17 @@ def start_stm32_firmware(podtp):
     podtp.send(packet)
 
 if __name__ == '__main__':
+    with open('config.json', 'r') as file:
+        config = json.loads(file.read())
     parser = argparse.ArgumentParser(description='Upload firmware to STM32 via ESP32 over WiFi')
     parser.add_argument('file', help='Binary file to upload', type=str)
-    parser.add_argument('-i', '--ip', help='IP address of the ESP32', type=str, default=DEFAULT_SERVER_IP, required=False)
-    parser.add_argument('-p', '--port', help='Port number of the ESP32', type=int, default=DEFAULT_SERVER_PORT, required=False)
-
+    
     args = parser.parse_args()
-    print_t(f'Uploading {args.file} to {args.ip}:{args.port}')
+    ip = config['ip']
+    port = config['port']
+    print_t(f'Uploading {args.file} to {ip}:{port}')
 
-    podtp = Podtp(args.ip, args.port)
+    podtp = Podtp(config)
     if not podtp.connect():
         exit(1)
 

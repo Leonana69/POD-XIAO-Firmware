@@ -6,7 +6,6 @@ PODTP_START_BYTE_1 = 0xAD
 PODTP_START_BYTE_2 = 0x6E
 
 class PodtpType(Enum):
-    PODTP_TYPE_ERROR = 0x0
     PODTP_TYPE_ACK = 0x1
     PODTP_TYPE_COMMAND = 0x2
     PODTP_TYPE_ESP32 = 0xE
@@ -17,16 +16,20 @@ class PodtpType(Enum):
         return super().__eq__(__value)
 
 class PodtpPort(Enum):
-    # Upload firmware to STM32
-    PORT_LOAD_BUFFER = 1
-    PORT_WRITE_FLASH = 2
-
-    # Command for ESP32
+    # PODTP_TYPE_ACK
+    PORT_ERROR = 0
+    PORT_OK = 1
+    
+    # PODTP_TYPE_ESP32
     PORT_ECHO = 0
     PORT_START_STM32_BOOTLOADER = 1
     PORT_START_STM32_FIRMWARE = 2
     PORT_DISABLE_STM32 = 3
     PORT_ENABLE_STM32 = 4
+
+    # PODTP_TYPE_BOOT_LOADER
+    PORT_LOAD_BUFFER = 1
+    PORT_WRITE_FLASH = 2
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, int):
@@ -34,7 +37,6 @@ class PodtpPort(Enum):
         return super().__eq__(__value)
 
 PACKET_TYPE_NAMES = {
-    PodtpType.PODTP_TYPE_ERROR.value: 'ERROR',
     PodtpType.PODTP_TYPE_ACK.value: 'ACK',
     PodtpType.PODTP_TYPE_COMMAND.value: 'COMMAND',
     PodtpType.PODTP_TYPE_ESP32.value: 'ESP32',
