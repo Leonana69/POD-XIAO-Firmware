@@ -1,7 +1,6 @@
-from ctypes import Structure, Union, c_uint8
 from enum import Enum
 
-PODTP_MAX_DATA_LEN = 127
+PODTP_MAX_DATA_LEN = 126
 
 PODTP_START_BYTE_1 = 0xAD
 PODTP_START_BYTE_2 = 0x6E
@@ -9,61 +8,130 @@ PODTP_START_BYTE_2 = 0x6E
 class PodtpType(Enum):
     PODTP_TYPE_ERROR = 0x0
     PODTP_TYPE_ACK = 0x1
+    PODTP_TYPE_COMMAND = 0x2
     PODTP_TYPE_ESP32 = 0xE
     PODTP_TYPE_BOOT_LOADER = 0xF
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, int):
+            __value = PodtpType(__value)
+        return super().__eq__(__value)
 
-class Header(Union):
-    _fields_ = [("header", c_uint8),
-                ("_bitfield", c_uint8)]
+class PodtpPort(Enum):
+    # Upload firmware to STM32
+    PORT_LOAD_BUFFER = 1
+    PORT_WRITE_FLASH = 2
 
-    @property
-    def type(self):
-        return (self._bitfield & 0xF0) >> 4
+    # Command for ESP32
+    PORT_ECHO = 0
+    PORT_START_STM32_BOOTLOADER = 1
+    PORT_START_STM32_FIRMWARE = 2
+    PORT_DISABLE_STM32 = 3
+    PORT_ENABLE_STM32 = 4
 
-    @type.setter
-    def type(self, value):
-        self._bitfield = (self._bitfield & 0x0F) | ((value & 0x0F) << 4)
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, int):
+            __value = PodtpPort(__value)
+        return super().__eq__(__value)
 
-    @property
-    def port(self):
-        return self._bitfield & 0x0F
+PACKET_TYPE_NAMES = {
+    PodtpType.PODTP_TYPE_ERROR.value: 'ERROR',
+    PodtpType.PODTP_TYPE_ACK.value: 'ACK',
+    PodtpType.PODTP_TYPE_COMMAND.value: 'COMMAND',
+    PodtpType.PODTP_TYPE_ESP32.value: 'ESP32',
+    PodtpType.PODTP_TYPE_BOOT_LOADER.value: 'BOOT_LOADER'
+}
 
-    @port.setter
-    def port(self, value):
-        self._bitfield = (self._bitfield & 0xF0) | (value & 0x0F)
-
-class DataPacket(Structure):
-    _pack_ = 1  # Ensure packed structure (no padding)
-    _fields_ = [("header", Header),
-                ("data", c_uint8 * PODTP_MAX_DATA_LEN)]
-
-class ContentPacket(Union):
-    _fields_ = [("packet", DataPacket),
-                ("raw", c_uint8 * (PODTP_MAX_DATA_LEN + 1))]
+class RawPacket:
+    def __init__(self, length = 1) -> None:
+        if length > PODTP_MAX_DATA_LEN + 1 or length < 1:
+            raise ValueError("Length must be between 1 and PODTP_MAX_DATA_LEN + 1")
+        self.length = length
+        self.raw = bytearray(PODTP_MAX_DATA_LEN + 1)
     
-class PodtpPacket(Structure):
-    _fields_ = [("length", c_uint8),
-                ("content", ContentPacket)]
-    
-    def pack(self):
+    def __getitem__(self, key):
+        return self.raw[key]
+
+    def __setitem__(self, key, value):
+        self.raw[key] = value
+
+    def __len__(self):
+        return self.length
+
+    def unpack(self, buffer):
+        self.length = buffer[0]
+        self.data = buffer[1:]
+
+class PodtpPacket:
+    class Header:
+        def __init__(self, buffer: bytearray) -> None:
+            self.buffer = buffer
+
+        @property
+        def type(self):
+            return (self.buffer[0] & 0xF0) >> 4
+        
+        @type.setter
+        def type(self, value: int | PodtpType):
+            if isinstance(value, PodtpType):
+                value = value.value
+            self.buffer[0] = (self.buffer[0] & 0x0F) | ((value & 0x0F) << 4)
+        
+        @property
+        def port(self):
+            return self.buffer[0] & 0x0F
+        
+        @port.setter
+        def port(self, value: int | PodtpPort):
+            if isinstance(value, PodtpPort):
+                value = value.value
+            self.buffer[0] = (self.buffer[0] & 0xF0) | (value & 0x0F)
+
+    class Data:
+        def __init__(self, buffer: bytearray) -> None:
+            self.buffer = buffer
+
+        def __getitem__(self, key):
+            if isinstance(key, slice):
+                start = key.start + 1 if key.start is not None else 1
+                stop = key.stop + 1 if key.stop is not None else len(self.buffer)
+                return self.buffer[start:stop]
+            else:
+                return self.buffer[key + 1]
+        
+        def __setitem__(self, key, value):
+            if isinstance(key, slice):
+                start = key.start + 1 if key.start is not None else 1
+                stop = key.stop + 1 if key.stop is not None else len(self.buffer)
+                self.buffer[start:stop] = value
+            else:
+                self.buffer[key + 1] = value
+
+    def __init__(self) -> None:
+        self.length = 0
+        self.raw = RawPacket()
+        self.header = PodtpPacket.Header(self.raw)
+        self.data = PodtpPacket.Data(self.raw)
+
+    def set_header(self, type: int | PodtpType, port: int | PodtpPort) -> 'PodtpPacket':
+        self.header.type = type
+        self.header.port = port
+        self.length = 1
+        return self
+
+    def pack(self) -> bytearray:
         buffer = bytearray(2 + 1 + self.length)
         buffer[0] = PODTP_START_BYTE_1
         buffer[1] = PODTP_START_BYTE_2
         buffer[2] = self.length
-        buffer[3:3 + self.length] = self.content.raw[:self.length]
+        buffer[3:3 + self.length] = self.raw[:self.length]
         return buffer
     
-    def unpack(self, buffer):
+    def unpack(self, buffer) -> bool:
         if buffer[0] != PODTP_START_BYTE_1 or buffer[1] != PODTP_START_BYTE_2:
             return False
         self.length = buffer[2]
-        self.content.raw[:self.length] = buffer[3:3 + self.length]
+        self.raw[:self.length] = buffer[3:3 + self.length]
         return True
-    
-    def GET_EMPTY_PACKET():
-        packet = PodtpPacket()
-        packet.length = 0
-        return packet
-    
+
     def __repr__(self):
-        return f'PodtpPacket(length={self.length}, type={self.content.packet.header.type}, port={self.content.packet.header.port})'
+        return f'PodtpPacket(length={self.length}, type={PACKET_TYPE_NAMES[self.header.type]}, port={self.header.port})'

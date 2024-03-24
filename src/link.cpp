@@ -19,12 +19,21 @@ void linkProcessPacket(PodtpPacket *packet) {
 
         case PODTP_TYPE_ESP32:
             // packets for ESP32 are not sent to STM32
-            if (packet->port == PORT_START_STM32_BOOTLOADER) {
+            if (packet->port == PORT_ECHO) {
+                DEBUG_PRINT("Echo packet: p=%d, l=%d\n", packet->port, packet->length);
+                wifiLink->sendPacket(packet);
+            } else if (packet->port == PORT_START_STM32_BOOTLOADER) {
                 DEBUG_PRINT("Start STM32 Bootloader");
                 bootSTM32Bootloader();
             } else if (packet->port == PORT_START_STM32_FIRMWARE) {
                 DEBUG_PRINT("Start STM32 Firmware");
                 bootSTM32Firmware();
+            } else if (packet->port == PORT_DISABLE_STM32) {
+                DEBUG_PRINT("Disable STM32");
+                bootSTM32Disable();
+            } else if (packet->port == PORT_ENABLE_STM32) {
+                DEBUG_PRINT("Enable STM32");
+                bootSTM32Enable();
             } else {
                 DEBUG_PRINT("Unknown ESP32 packet: p=%d, l=%d\n", packet->port, packet->length);
             }

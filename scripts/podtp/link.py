@@ -1,6 +1,5 @@
 import socket
 import select
-import time
 from enum import Enum
 from typing import Optional
 
@@ -41,11 +40,12 @@ class WifiLink:
         self.client_connected = False
         print_t(f'Disconnected from {self.server_ip}:{self.server_port}')
 
-    def send(self, packet: PodtpPacket):
+    def send(self, packet: PodtpPacket) -> bool:
         if not self.client_connected:
             print_t(f'Failed to send packet: Not connected to {self.server_ip}:{self.server_port}')
-            return
+            return False
         self.client_socket.send(packet.pack())
+        return True
 
     def receive(self) -> Optional[PodtpPacket]:
         """
@@ -91,7 +91,7 @@ class WifiLink:
                     else:
                         self.link_state = WifiLinkState.PODTP_STATE_RAW_DATA
                 case WifiLinkState.PODTP_STATE_RAW_DATA:
-                    self.packet.content.raw[self.packet.length] = byte
+                    self.packet.raw[self.packet.length] = byte
                     self.packet.length += 1
                     if self.packet.length >= self.length:
                         self.link_state = WifiLinkState.PODTP_STATE_START_1

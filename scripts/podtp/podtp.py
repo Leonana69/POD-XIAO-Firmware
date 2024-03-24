@@ -1,5 +1,7 @@
-from .podtp_packet import PodtpPacket, PodtpType
-from .link import WifiLink, LINK_MAX_WAIT_TIME
+from typing import Optional
+from .podtp_packet import PodtpPacket, PodtpType, PodtpPort
+from .link import WifiLink
+from .utils import print_t
 
 class Podtp:
     def __init__(self, server_ip, server_port):
@@ -12,19 +14,33 @@ class Podtp:
         self.link.disconnect()
 
     def send(self, packet: PodtpPacket) -> bool:
-        if packet.content.packet.header.type == PodtpType.PODTP_TYPE_BOOT_LOADER.value:
+        if packet.header.type == PodtpType.PODTP_TYPE_BOOT_LOADER:
             return self.send_reliable(packet)
         else:
-            return self.link.send(packet)
+            return self.send_once(packet)
+        
+    def receive(self) -> Optional[PodtpPacket]:
+        return self.link.receive()
 
     def send_once(self, packet: PodtpPacket) -> bool:
-        self.link.send(packet)
-        return True
+        return self.link.send(packet)
     
     def send_reliable(self, packet: PodtpPacket) -> bool:
         self.link.send(packet)
         ack = self.link.receive()
-        if ack and ack.content.packet.header.type == PodtpType.PODTP_TYPE_ACK.value:
+        if ack and ack.header.type == PodtpType.PODTP_TYPE_ACK:
             return True
         else:
             return False
+        
+    def stm32_enable(self, disable = False):
+        packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_ESP32,
+            PodtpPort.PORT_ENABLE_STM32 if not disable else PodtpPort.PORT_DISABLE_STM32)
+        self.send(packet)
+
+    def esp32_echo(self):
+        packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_ESP32, PodtpPort.PORT_ECHO)
+        self.send(packet)
+        packet = self.receive()
+        if packet:
+            print_t(packet)

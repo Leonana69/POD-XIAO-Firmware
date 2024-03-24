@@ -13,3 +13,11 @@ void bootSTM32Firmware() {
     delay(100);
     digitalWrite(STM_ENABLE_PIN, HIGH);
 }
+
+void bootSTM32Disable() {
+    digitalWrite(STM_ENABLE_PIN, LOW);
+}
+
+void bootSTM32Enable() {
+    digitalWrite(STM_ENABLE_PIN, HIGH);
+}

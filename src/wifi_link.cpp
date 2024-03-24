@@ -6,8 +6,10 @@
 
 WifiLink *wifiLink;
 
-const char* WIFI_SSID = "YECL-tplink";
-const char* WIFI_PASSWORD = "08781550";
+// const char* WIFI_SSID = "YECL-tplink";
+// const char* WIFI_PASSWORD = "08781550";
+const char* WIFI_SSID = "LEONA";
+const char* WIFI_PASSWORD = "64221771";
 
 WifiLink::WifiLink(): server(80), client() {
 	WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
