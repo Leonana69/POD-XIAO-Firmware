@@ -17,19 +17,24 @@ class PodtpType(Enum):
 
 class PodtpPort(Enum):
     # PODTP_TYPE_ACK
-    PORT_ERROR = 0
-    PORT_OK = 1
+    PORT_ERROR = 0x0
+    PORT_OK = 0x1
+
+    # PODTP_TYPE_COMMAND
+    PODTP_PORT_RPYT = 0x0
+    PODTP_PORT_TAKEOFF = 0x1
+    PODTP_PORT_LAND = 0x2
     
     # PODTP_TYPE_ESP32
-    PORT_ECHO = 0
-    PORT_START_STM32_BOOTLOADER = 1
-    PORT_START_STM32_FIRMWARE = 2
-    PORT_DISABLE_STM32 = 3
-    PORT_ENABLE_STM32 = 4
+    PORT_ECHO = 0x0
+    PORT_START_STM32_BOOTLOADER = 0x1
+    PORT_START_STM32_FIRMWARE = 0x2
+    PORT_DISABLE_STM32 = 0x3
+    PORT_ENABLE_STM32 = 0x4
 
     # PODTP_TYPE_BOOT_LOADER
-    PORT_LOAD_BUFFER = 1
-    PORT_WRITE_FLASH = 2
+    PORT_LOAD_BUFFER = 0x1
+    PORT_WRITE_FLASH = 0x2
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, int):

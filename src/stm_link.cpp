@@ -14,19 +14,18 @@ StmLink::StmLink(): uartSerial(0) {
 }
 
 void StmLink::sendPacket(PodtpPacket *packet) {
-    static uint8_t tail[2] = { 0xA, 0xD };
+    static uint8_t buffer[PODTP_MAX_DATA_LEN + 5] = { PODTP_START_BYTE_1, PODTP_START_BYTE_2, 0 };
     uint8_t check_sum[2] = { 0 };
     check_sum[0] = check_sum[1] = packet->length;
-    uint8_t start_bytes[2] = { PODTP_START_BYTE_1, PODTP_START_BYTE_2 };
-    uartSerial.write(start_bytes, 2);
-    uartSerial.write(&packet->length, 1);
+    buffer[2] = packet->length;
     for (uint8_t i = 0; i < packet->length; i++) {
         check_sum[0] += packet->raw[i];
         check_sum[1] += check_sum[0];
+        buffer[i + 3] = packet->raw[i];
     }
-    uartSerial.write(packet->raw, packet->length);
-    uartSerial.write(check_sum, 2);
-    uartSerial.write(tail, 2);
+    buffer[packet->length + 3] = check_sum[0];
+    buffer[packet->length + 4] = check_sum[1];
+    uartSerial.write(buffer, packet->length + 5);
 }
 
 void StmLink::write(uint8_t *data, uint8_t length) {

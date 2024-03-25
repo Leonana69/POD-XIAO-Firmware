@@ -25,8 +25,7 @@ void setup() {
 	wifiLink = new WifiLink();
 	stmLink = new StmLink();
 
-	// start bootloader for test
-	bootSTM32Bootloader();
+	bootSTM32Firmware();
 
 	xTaskCreatePinnedToCore(wifiLinkRxTask, "wifiServerTask", 4096, NULL, 1, NULL, 1);
 	xTaskCreatePinnedToCore(buttonTask, "buttonTask", 4096, NULL, 1, NULL, 1);

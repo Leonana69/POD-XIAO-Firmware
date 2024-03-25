@@ -13,6 +13,11 @@ void linkProcessPacket(PodtpPacket *packet) {
             stmLink->ackQueuePut(packet);
             break;
 
+        case PODTP_TYPE_COMMAND:
+            DEBUG_PRINT("Command packet: p=%d, l=%d\n", packet->port, packet->length);
+            stmLink->sendPacket(packet);
+            break;
+
         case PODTP_TYPE_ESP32:
             // packets for ESP32 are not sent to STM32
             if (packet->port == PORT_ECHO) {
