@@ -6,10 +6,10 @@
 
 WifiLink *wifiLink;
 
-// const char* WIFI_SSID = "YECL-tplink";
-// const char* WIFI_PASSWORD = "08781550";
-const char* WIFI_SSID = "LEONA";
-const char* WIFI_PASSWORD = "64221771";
+const char* WIFI_SSID = "YECL-tplink";
+const char* WIFI_PASSWORD = "08781550";
+// const char* WIFI_SSID = "LEONA";
+// const char* WIFI_PASSWORD = "64221771";
 
 WifiLink::WifiLink(): server(80), client() {
 	WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -41,7 +41,6 @@ void WifiLink::rxTask(void *pvParameters) {
 		if (client && client.connected() && client.available()) {
 			while (client.available()) {
 				if (wifiParsePacket((uint8_t) client.read())) {
-					DEBUG_PRINT("RP: t=%d, p=%d, l=%d\n", packetBufferRx.type, packetBufferRx.port, packetBufferRx.length);
 					linkProcessPacket(&packetBufferRx);
 				}
 			}

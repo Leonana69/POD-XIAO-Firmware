@@ -9,13 +9,18 @@
 void linkProcessPacket(PodtpPacket *packet) {
     switch (packet->type) {
         case PODTP_TYPE_ACK:
-            DEBUG_PRINT("ACK: %s, l=%d\n", packet->port == PODTP_PORT_OK ? "OK" : "ERROR", packet->length);
+            DEBUG_PRINT("ACK: %s\n", packet->port == PODTP_PORT_OK ? "OK" : "ERROR");
             stmLink->ackQueuePut(packet);
             break;
 
         case PODTP_TYPE_COMMAND:
             DEBUG_PRINT("Command packet: p=%d, l=%d\n", packet->port, packet->length);
             stmLink->sendPacket(packet);
+            break;
+
+        case PODTP_TYPE_LOG:
+            DEBUG_PRINT("Log packet: p=%d, l=%d\n", packet->port, packet->length);
+            wifiLink->sendPacket(packet);
             break;
 
         case PODTP_TYPE_ESP32:
@@ -40,7 +45,6 @@ void linkProcessPacket(PodtpPacket *packet) {
             }
             break;
         case PODTP_TYPE_BOOT_LOADER:
-            DEBUG_PRINT("Bootloader packet: p=%d, l=%d\n", packet->port, packet->length);
             stmLink->sendReliablePacket(packet);
             wifiLink->sendPacket(packet);
             break;

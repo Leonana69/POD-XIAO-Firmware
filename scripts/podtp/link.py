@@ -47,7 +47,7 @@ class WifiLink:
         self.client_socket.send(packet.pack())
         return True
 
-    def receive(self) -> Optional[PodtpPacket]:
+    def receive(self, timeout = 0.1) -> Optional[PodtpPacket]:
         """
         Read from the TCP connection until a packet is returned, or a timeout occurs.
         :param timeout: The number of seconds to wait for a complete packet.
@@ -57,9 +57,8 @@ class WifiLink:
             print_t(f'Failed to receive packet: Not connected to {self.server_ip}:{self.server_port}')
             return None
         while True:
-            readable, _, _ = select.select([self.client_socket], [], [], 5)
+            readable, _, _ = select.select([self.client_socket], [], [], timeout)
             if not readable:
-                print_t("Timeout: No data received.")
                 return None
 
             data = self.client_socket.recv(PODTP_MAX_DATA_LEN + 1)

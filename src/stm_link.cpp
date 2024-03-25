@@ -41,7 +41,7 @@ bool StmLink::sendReliablePacket(PodtpPacket *packet, int retry) {
     packet->type = PODTP_TYPE_ACK;
     packet->length = 1;
     for (int i = 0; i < retry; i++) {
-        DEBUG_PRINT("SR [%d]: p=%d, l=%d\n", i, packet->port, packet->length);
+        // DEBUG_PRINT("SR [%d]: p=%d, l=%d\n", i, packet->port, packet->length);
         sendPacket(&packetBufferTx);
         xQueueReceive(ackQueue, packet, 1000);
         if (packet->port == PODTP_PORT_OK) {
