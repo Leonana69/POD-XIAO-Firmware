@@ -10,23 +10,27 @@ void linkProcessPacket(PodtpPacket *packet) {
     switch (packet->type) {
         case PODTP_TYPE_ACK:
             DEBUG_PRINT("ACK: %s\n", packet->port == PODTP_PORT_OK ? "OK" : "ERROR");
-            stmLink->ackQueuePut(packet);
+            if (!stmLink->ackQueuePut(packet)) {
+                DEBUG_PRINT("ACK forward to WiFi\n");
+                wifiLink->sendPacket(packet);
+            }
             break;
 
         case PODTP_TYPE_COMMAND:
-            DEBUG_PRINT("Command packet: p=%d, l=%d\n", packet->port, packet->length);
+        case PODTP_TYPE_CTRL:
+            DEBUG_PRINT("CO/CT: (%d, %d, %d)\n", packet->type, packet->port, packet->length);
             stmLink->sendPacket(packet);
             break;
 
         case PODTP_TYPE_LOG:
-            DEBUG_PRINT("Log packet: p=%d, l=%d\n", packet->port, packet->length);
+            DEBUG_PRINT("LOG: (%d, %d)\n", packet->port, packet->length);
             wifiLink->sendPacket(packet);
             break;
 
         case PODTP_TYPE_ESP32:
             // packets for ESP32 are not sent to STM32
             if (packet->port == PORT_ECHO) {
-                DEBUG_PRINT("Echo packet: p=%d, l=%d\n", packet->port, packet->length);
+                DEBUG_PRINT("ECHO: (%d, %d)\n", packet->port, packet->length);
                 wifiLink->sendPacket(packet);
             } else if (packet->port == PORT_START_STM32_BOOTLOADER) {
                 DEBUG_PRINT("Start STM32 Bootloader");

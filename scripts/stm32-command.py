@@ -1,19 +1,5 @@
-import json, struct
-from podtp import Podtp, PodtpPacket, PodtpType, PodtpPort
-from podtp import print_t
-
-def send_packet(podtp):
-    packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_COMMAND,
-                                      PodtpPort.PODTP_PORT_RPYT)
-    roll = 0.0
-    pitch = 0.0
-    yaw = 0.0
-    thrust = 10000.0
-
-    size = struct.calcsize('<ffff')
-    packet.data[:size] = struct.pack('<ffff', roll, pitch, yaw, thrust)
-    packet.length = 1 + size
-    podtp.send(packet)
+import json
+from podtp import Podtp, print_t
 
 def main():
     with open('config.json', 'r') as file:
@@ -21,7 +7,12 @@ def main():
     
     podtp = Podtp(config)
     if podtp.connect():
-        send_packet(podtp)
+        if not podtp.send_ctrl_lock(False):
+            print_t('Failed to unlock control')
+        else:
+            print_t('Drone unlocked')
+            podtp.send_command_setpoint(0, 0, 0, 12430)
+            podtp.send_command_hover(0.5, 0, 0, 0)
         podtp.disconnect()
 
 if __name__ == '__main__':

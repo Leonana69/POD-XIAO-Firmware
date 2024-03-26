@@ -1,4 +1,5 @@
 import json
+from time import sleep
 from podtp import Podtp
 
 def main():
@@ -7,7 +8,7 @@ def main():
     
     podtp = Podtp(config)
     if podtp.connect():
-        podtp.esp32_echo()
+        sleep(5)
         podtp.disconnect()
 
 if __name__ == '__main__':

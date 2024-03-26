@@ -1,5 +1,6 @@
 import socket
 import select
+import queue
 from enum import Enum
 from typing import Optional
 
@@ -24,6 +25,7 @@ class WifiLink:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.settimeout(LINK_MAX_WAIT_TIME / 1000)
         self.client_connected = False
+        self.packet_queue = queue.Queue()
 
     def connect(self) -> bool:
         try:
@@ -66,11 +68,13 @@ class WifiLink:
                 print_t("Connection closed by the server.")
                 return None
             
-            packet = self.process(data)
-            if packet:
-                return packet
+            self.process(data)
+            try:
+                return self.packet_queue.get_nowait()
+            except queue.Empty:
+                return None
 
-    def process(self, data: bytes) -> Optional[PodtpPacket]:
+    def process(self, data: bytes):
         for byte in data:
             match self.link_state:
                 case WifiLinkState.PODTP_STATE_START_1:
@@ -92,7 +96,6 @@ class WifiLink:
                 case WifiLinkState.PODTP_STATE_RAW_DATA:
                     self.packet.raw[self.packet.length] = byte
                     self.packet.length += 1
-                    if self.packet.length >= self.length:
+                    if self.packet.length == self.length:
                         self.link_state = WifiLinkState.PODTP_STATE_START_1
-                        return self.packet
-        return None
+                        self.packet_queue.put(self.packet)

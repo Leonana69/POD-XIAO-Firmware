@@ -11,6 +11,7 @@ StmLink *stmLink;
 StmLink::StmLink(): uartSerial(0) {
     uartSerial.begin(1000000, SERIAL_8N1, STM_RX_PIN, STM_TX_PIN);
     ackQueue = xQueueCreate(3, sizeof(PodtpPacket));
+    waitForAck = false;
 }
 
 void StmLink::sendPacket(PodtpPacket *packet) {
@@ -32,22 +33,30 @@ void StmLink::write(uint8_t *data, uint8_t length) {
     uartSerial.write(data, length);
 }
 
-void StmLink::ackQueuePut(PodtpPacket *packet) {
-    xQueueSend(ackQueue, packet, 0);
+bool StmLink::ackQueuePut(PodtpPacket *packet) {
+    bool ret = false;
+    if (waitForAck) {
+        xQueueSend(ackQueue, packet, 0);
+        ret = true;
+    }
+    return ret;
 }
 
 bool StmLink::sendReliablePacket(PodtpPacket *packet, int retry) {
     packetBufferTx = *packet;
     packet->type = PODTP_TYPE_ACK;
     packet->length = 1;
+    waitForAck = true;
     for (int i = 0; i < retry; i++) {
         // DEBUG_PRINT("SR [%d]: p=%d, l=%d\n", i, packet->port, packet->length);
         sendPacket(&packetBufferTx);
         xQueueReceive(ackQueue, packet, 1000);
         if (packet->port == PODTP_PORT_OK) {
+            waitForAck = false;
             return true;
         }
     }
+    waitForAck = false;
     return false;
 }
 

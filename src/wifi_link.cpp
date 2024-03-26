@@ -6,10 +6,10 @@
 
 WifiLink *wifiLink;
 
-const char* WIFI_SSID = "YECL-tplink";
-const char* WIFI_PASSWORD = "08781550";
-// const char* WIFI_SSID = "LEONA";
-// const char* WIFI_PASSWORD = "64221771";
+// const char* WIFI_SSID = "YECL-tplink";
+// const char* WIFI_PASSWORD = "08781550";
+const char* WIFI_SSID = "LEONA";
+const char* WIFI_PASSWORD = "64221771";
 
 WifiLink::WifiLink(): server(80), client() {
 	WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -23,13 +23,24 @@ WifiLink::WifiLink(): server(80), client() {
 }
 
 void WifiLink::sendPacket(PodtpPacket *packet) {
+    packetBuffer.push(packet);
     if (!client || !client.connected()) {
         return;
     }
-    static uint8_t prefix[3] = {PODTP_START_BYTE_1, PODTP_START_BYTE_2, 0};
-    prefix[2] = packet->length;
-    client.write(prefix, 3);
-    client.write(packet->raw, packet->length);
+
+    while (!packetBuffer.empty()) {
+        PodtpPacket *p = packetBuffer.pop();
+        tx(p);
+    }
+}
+
+void WifiLink::tx(PodtpPacket *packet) {
+    static uint8_t buffer[PODTP_MAX_DATA_LEN + 4] = { PODTP_START_BYTE_1, PODTP_START_BYTE_2, 0 };
+    buffer[2] = packet->length;
+    for (uint8_t i = 0; i < packet->length; i++) {
+        buffer[i + 3] = packet->raw[i];
+    }
+    client.write(buffer, packet->length + 3);
 }
 
 void WifiLink::rxTask(void *pvParameters) {
@@ -38,14 +49,20 @@ void WifiLink::rxTask(void *pvParameters) {
 			client = server.available();
 		}
    		// check for new packet
-		if (client && client.connected() && client.available()) {
-			while (client.available()) {
-				if (wifiParsePacket((uint8_t) client.read())) {
-					linkProcessPacket(&packetBufferRx);
-				}
-			}
+		if (client && client.connected()) {
+            if (client.available())
+                while (client.available()) {
+                    if (wifiParsePacket((uint8_t) client.read())) {
+                        linkProcessPacket(&packetBufferRx);
+                    }
+                }
+            // dump packet buffer
+            if (!packetBuffer.empty()) {
+                PodtpPacket *packet = packetBuffer.pop();
+                tx(packet);
+            }
 		}
-		vTaskDelay(20);
+		vTaskDelay(10);
 	}
 }
 

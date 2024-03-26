@@ -11,11 +11,12 @@ private:
     PodtpPacket packetBufferRx;
     PodtpPacket packetBufferTx;
     bool uartParsePacket(uint8_t byte);
+    bool waitForAck;
 public:
     StmLink();
     void sendPacket(PodtpPacket *packet);
     void write(uint8_t *data, uint8_t length);
-    void ackQueuePut(PodtpPacket *packet);
+    bool ackQueuePut(PodtpPacket *packet);
     bool sendReliablePacket(PodtpPacket *packet, int retry = 10);
     void rxTask(void *pvParameters);
 };

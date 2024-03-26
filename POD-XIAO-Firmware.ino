@@ -21,15 +21,14 @@ void setup() {
 	pinMode(STM_FLOW_CTRL_PIN, OUTPUT);
 	pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-	DEBUG_PRINT("Hello, world!\n");
 	wifiLink = new WifiLink();
 	stmLink = new StmLink();
-
-	bootSTM32Firmware();
 
 	xTaskCreatePinnedToCore(wifiLinkRxTask, "wifiServerTask", 4096, NULL, 1, NULL, 1);
 	xTaskCreatePinnedToCore(buttonTask, "buttonTask", 4096, NULL, 1, NULL, 1);
 	xTaskCreatePinnedToCore(stmLinkRxTask, "stmLinkRxTask", 4096, NULL, 1, NULL, 1);
+	bootSTM32Bootloader();
+	bootSTM32Firmware();
 }
 
 void loop() {}

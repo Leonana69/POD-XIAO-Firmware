@@ -1,4 +1,5 @@
 import queue
+import struct
 from typing import Optional
 from threading import Thread
 from .podtp_packet import PodtpPacket, PodtpType, PodtpPort
@@ -28,7 +29,10 @@ class Podtp:
         while self.connected:
             packet = self.link.receive()
             if packet:
-                self.packet_queue[packet.header.type].put(packet)
+                if packet.header.type == PodtpType.PODTP_TYPE_LOG:
+                    print_t(f'Log: {packet.data[:packet.length - 1].decode()}', end='')
+                else:
+                    self.packet_queue[packet.header.type].put(packet)
         
     def get_packet(self, type: PodtpType, timeout = 1) -> Optional[PodtpPacket]:
         try:
@@ -53,3 +57,22 @@ class Podtp:
         packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_ESP32, PodtpPort.PORT_ECHO)
         self.send_packet(packet)
         packet = self.get_packet(PodtpType.PODTP_TYPE_ESP32)
+
+    def send_ctrl_lock(self, lock: bool) -> bool:
+        packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_CTRL,
+                                          PodtpPort.PODTP_PORT_LOCK if lock else PodtpPort.PODTP_PORT_UNLOCK)
+        return self.send_packet(packet, ack=True)
+
+    def send_command_setpoint(self, roll: float, pitch: float, yaw: float, thrust: float):
+        packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_COMMAND, PodtpPort.PODTP_PORT_RPYT)
+        size = struct.calcsize('<ffff')
+        packet.data[:size] = struct.pack('<ffff', roll, pitch, yaw, thrust)
+        packet.length = 1 + size
+        self.send_packet(packet)
+
+    def send_command_hover(self, height: float, vx: float, vy: float, vyaw: float):
+        packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_COMMAND, PodtpPort.PODTP_PORT_HOVER)
+        size = struct.calcsize('<ffff')
+        packet.data[:size] = struct.pack('<ffff', height, vx, vy, vyaw)
+        packet.length = 1 + size
+        self.send_packet(packet)
