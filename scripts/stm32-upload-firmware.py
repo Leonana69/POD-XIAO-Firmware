@@ -40,8 +40,8 @@ def read_bin_file(file_path):
         return file.read()
 
 def send_write_flash(podtp: Podtp, flash_page, num_pages) -> bool:
-    packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_BOOT_LOADER,
-                                      PodtpPort.PORT_WRITE_FLASH)
+    packet = PodtpPacket().set_header(PodtpType.BOOT_LOADER,
+                                      PodtpPort.WRITE_FLASH, ack=True)
     write_flash = WriteFlash()
     write_flash.bufferPage = 0
     write_flash.flashPage = flash_page + FIRMWARE_START_PAGE
@@ -49,15 +49,15 @@ def send_write_flash(podtp: Podtp, flash_page, num_pages) -> bool:
 
     packet.data[:write_flash.size()] = write_flash.pack()
     packet.length = 1 + write_flash.size()
-    if not podtp.send_packet(packet, ack=True, timeout=10):
+    if not podtp.send_packet(packet, timeout=10):
         print_t(f'Failed to write flash page {flash_page}')
         return False
     return True
 
 def send_load_buffer(podtp: Podtp, file_path) -> bool:
     binary = read_bin_file(file_path)
-    packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_BOOT_LOADER,
-                                      PodtpPort.PORT_LOAD_BUFFER)
+    packet = PodtpPacket().set_header(PodtpType.BOOT_LOADER,
+                                      PodtpPort.LOAD_BUFFER, ack=True)
 
     load_buffer = LoadBuffer()
 
@@ -97,7 +97,7 @@ def send_load_buffer(podtp: Podtp, file_path) -> bool:
         # print_t(f'Sent page {page} offset {offset} packet_length {packet.length} packet_load {packet_load}')
         packet.data[load_buffer.size():load_buffer.size() + packet_load] = binary[index:index + packet_load]
         packet.length = 1 + load_buffer.size() + packet_load
-        if not podtp.send_packet(packet, ack=True, timeout=2):
+        if not podtp.send_packet(packet, timeout=2):
             print_t(f'Upload failed at page {page} offset {offset}')
             return False
         index += packet_load
@@ -107,13 +107,13 @@ def send_load_buffer(podtp: Podtp, file_path) -> bool:
     return True
 
 def start_stm32_bootloader(podtp: Podtp):
-    packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_ESP32,
-                                      PodtpPort.PORT_START_STM32_BOOTLOADER)
+    packet = PodtpPacket().set_header(PodtpType.ESP32,
+                                      PodtpPort.START_STM32_BOOTLOADER)
     podtp.send_packet(packet)
 
 def start_stm32_firmware(podtp: Podtp):
-    packet = PodtpPacket().set_header(PodtpType.PODTP_TYPE_ESP32,
-                                      PodtpPort.PORT_START_STM32_FIRMWARE)
+    packet = PodtpPacket().set_header(PodtpType.ESP32,
+                                      PodtpPort.START_STM32_FIRMWARE)
     podtp.send_packet(packet)
 
 if __name__ == '__main__':

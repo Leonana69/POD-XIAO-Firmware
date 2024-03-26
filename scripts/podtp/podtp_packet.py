@@ -6,45 +6,46 @@ PODTP_START_BYTE_1 = 0xAD
 PODTP_START_BYTE_2 = 0x6E
 
 class PodtpType(Enum):
-    PODTP_TYPE_ACK = 0x1
-    PODTP_TYPE_COMMAND = 0x2
-    PODTP_TYPE_LOG = 0x3
-    PODTP_TYPE_CTRL = 0x4
-    PODTP_TYPE_ESP32 = 0xE
-    PODTP_TYPE_BOOT_LOADER = 0xF
+    ACK = 0x1
+    COMMAND = 0x2
+    LOG = 0x3
+    CTRL = 0x4
+    ESP32 = 0xE
+    BOOT_LOADER = 0xF
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, int):
             __value = PodtpType(__value)
         return super().__eq__(__value)
 
 class PodtpPort(Enum):
-    # PODTP_TYPE_ACK
-    PORT_ERROR = 0x0
-    PORT_OK = 0x1
+    # ACK
+    ERROR = 0x0
+    OK = 0x1
 
-    # PODTP_TYPE_COMMAND
-    PODTP_PORT_RPYT = 0x0
-    PODTP_PORT_TAKEOFF = 0x1
-    PODTP_PORT_LAND = 0x2
-    PODTP_PORT_HOVER = 0x3
+    # COMMAND
+    RPYT = 0x0
+    TAKEOFF = 0x1
+    LAND = 0x2
+    HOVER = 0x3
 
-    # PODTP_TYPE_LOG
-    PODTP_PORT_STRING = 0x0
+    # LOG
+    STRING = 0x0
 
-    # PODTP_TYPE_CTRL
-    PODTP_PORT_LOCK = 0x0
-    PODTP_PORT_UNLOCK = 0x1
+    # CTRL
+    LOCK = 0x0
+    UNLOCK = 0x1
+    KEEP_ALIVE = 0x2
     
-    # PODTP_TYPE_ESP32
-    PORT_ECHO = 0x0
-    PORT_START_STM32_BOOTLOADER = 0x1
-    PORT_START_STM32_FIRMWARE = 0x2
-    PORT_DISABLE_STM32 = 0x3
-    PORT_ENABLE_STM32 = 0x4
+    # ESP32
+    ECHO = 0x0
+    START_STM32_BOOTLOADER = 0x1
+    START_STM32_FIRMWARE = 0x2
+    DISABLE_STM32 = 0x3
+    ENABLE_STM32 = 0x4
 
-    # PODTP_TYPE_BOOT_LOADER
-    PORT_LOAD_BUFFER = 0x1
-    PORT_WRITE_FLASH = 0x2
+    # BOOT_LOADER
+    LOAD_BUFFER = 0x1
+    WRITE_FLASH = 0x2
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, int):
@@ -52,11 +53,11 @@ class PodtpPort(Enum):
         return super().__eq__(__value)
 
 PACKET_TYPE_NAMES = {
-    PodtpType.PODTP_TYPE_ACK.value: 'ACK',
-    PodtpType.PODTP_TYPE_COMMAND.value: 'COMMAND',
-    PodtpType.PODTP_TYPE_LOG.value: 'LOG',
-    PodtpType.PODTP_TYPE_ESP32.value: 'ESP32',
-    PodtpType.PODTP_TYPE_BOOT_LOADER.value: 'BOOT_LOADER'
+    PodtpType.ACK.value: 'ACK',
+    PodtpType.COMMAND.value: 'COMMAND',
+    PodtpType.LOG.value: 'LOG',
+    PodtpType.ESP32.value: 'ESP32',
+    PodtpType.BOOT_LOADER.value: 'BOOT_LOADER'
 }
 
 class RawPacket:
@@ -89,20 +90,28 @@ class PodtpPacket:
             return (self.buffer[0] & 0xF0) >> 4
         
         @type.setter
-        def type(self, value: int | PodtpType):
-            if isinstance(value, PodtpType):
-                value = value.value
-            self.buffer[0] = (self.buffer[0] & 0x0F) | ((value & 0x0F) << 4)
+        def type(self, val: int | PodtpType):
+            if isinstance(val, PodtpType):
+                val = val.value
+            self.buffer[0] = (self.buffer[0] & 0x0F) | ((val & 0x0F) << 4)
         
         @property
         def port(self):
-            return self.buffer[0] & 0x0F
+            return self.buffer[0] & 0x07
         
         @port.setter
-        def port(self, value: int | PodtpPort):
-            if isinstance(value, PodtpPort):
-                value = value.value
-            self.buffer[0] = (self.buffer[0] & 0xF0) | (value & 0x0F)
+        def port(self, val: int | PodtpPort):
+            if isinstance(val, PodtpPort):
+                val = val.value
+            self.buffer[0] = (self.buffer[0] & 0xF8) | (val & 0x07)
+
+        @property
+        def ack(self):
+            return (self.buffer[0] & 0x08) >> 3
+        
+        @ack.setter
+        def ack(self, val: int):
+            self.buffer[0] = (self.buffer[0] & 0xF7) | ((val & 0x01) << 3)
 
     class Data:
         def __init__(self, buffer: bytearray) -> None:
@@ -130,9 +139,10 @@ class PodtpPacket:
         self.header = PodtpPacket.Header(self.raw)
         self.data = PodtpPacket.Data(self.raw)
 
-    def set_header(self, type: int | PodtpType, port: int | PodtpPort) -> 'PodtpPacket':
+    def set_header(self, type: int | PodtpType, port: int | PodtpPort, ack: int = 0) -> 'PodtpPacket':
         self.header.type = type
         self.header.port = port
+        self.header.ack = ack
         self.length = 1
         return self
 
